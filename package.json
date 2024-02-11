@@ -1,0 +1,25 @@
+{
+  "name": "todo-expressjs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yusnarsetiyadi/Todo-ExpressJS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yusnarsetiyadi/Todo-ExpressJS/issues"
+  },
+  "homepage": "https://github.com/yusnarsetiyadi/Todo-ExpressJS#readme",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "serve-static": "^1.15.0"
+  }
+}
