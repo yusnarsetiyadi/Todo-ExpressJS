@@ -1,61 +1,83 @@
-// require dependencies so they can be used throughout this code
 const express = require("express");
 const serveStatic = require("serve-static");
 const bodyParser = require("body-parser");
 const dotenv = require("dotenv");
+const mysql = require("mysql2");
 
-// initialize Express.js server and save as a variable
-// so it can be referred to as `app`
 const app = express();
 dotenv.config();
 
 app.use(bodyParser.json());
 app.use(serveStatic("public"));
-let todos = []; // In-memory storage for todos
 
-// GET endpoint to fetch all todo items
-app.get("/todos", (req, res) => {
-  res.json(todos);
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
+
+db.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL: ' + err.stack);
+    return;
+  }
+  console.log('Connected to MySQL');
+});
+
+// GET endpoint to fetch all todo items from the database
+app.get("/tasks", (req, res) => {
+  const query = 'SELECT * FROM task';
+  db.query(query, (err, results) => {
+    if (err) throw err;
+    res.json(results);
+  });
 });
 
 // POST endpoint to create a new todo item
-// provide `title` and optionally `completed` in the request body as JSON
-app.post("/todos", (req, res) => {
+app.post("/tasks", (req, res) => {
   const todo = {
-    id: todos.length + 1,
     title: req.body.title,
-    completed: req.body.completed || false,
+    completed: false,
   };
-  todos.push(todo);
-  res.status(201).json(todo);
+  const query = 'INSERT INTO task (title, completed) VALUES (?, ?)';
+  db.query(query, [todo.title, todo.completed], (err, result) => {
+    if (err) throw err;
+    todo.id = result.insertId;
+    res.status(201).json(todo);
+  });
 });
 
-// PUT endpiont to update an existing todo item with the specified `id`
-// provide updated `title` and/or `completed` in the request body as JSON
-app.put("/todos/:id", (req, res) => {
+// PUT endpoint to update an existing todo item with the specified `id`
+app.put("/tasks/:id", (req, res) => {
   const id = parseInt(req.params.id);
-  const todo = todos.find((t) => t.id === id);
-  if (!todo) {
-    return res.status(404).json({ error: "Todo not found" });
-  }
-  todo.title = req.body.title || todo.title;
-  todo.completed = req.body.completed || todo.completed;
-  res.json(todo);
+  const todo = {
+    completed: req.body.completed,
+  };
+  const query = 'UPDATE task SET completed = ? WHERE id = ?';
+  db.query(query, [todo.completed, id], (err, result) => {
+    if (err) throw err;
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Todo not found" });
+    }
+    todo.id = id;
+    res.json(todo);
+  });
 });
 
 // DELETE endpoint to remove an existing todo item with the specified `id`
-app.delete("/todos/:id", (req, res) => {
+app.delete("/tasks/:id", (req, res) => {
   const id = parseInt(req.params.id);
-  const index = todos.findIndex((t) => t.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Todo not found" });
-  }
-  todos.splice(index, 1);
-  res.status(204).send();
+  const query = 'DELETE FROM task WHERE id = ?';
+  db.query(query, [id], (err, result) => {
+    if (err) throw err;
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Todo not found" });
+    }
+    res.status(204).send();
+  });
 });
 
-// run the server on port 3000
-// for example the app can run locally at this URL: http://localhost:3000
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
